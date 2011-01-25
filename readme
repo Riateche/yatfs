@@ -1,0 +1,26 @@
+Usage Example: python testdb.py tags
+
+Enter folder name and see the results)
+
+Examples:
+
+Folder path: video/+ 
+house\
+tvshows\
+some_clip.avi
+clips.avi
+music.avi
+duplicate.avi
+s1.avi
+s3.avi
+s2.avi
+
+Folder path: duplicate
+video.avi
+text.txt
+
+Folder path: music/shakira
+track1.mp3
+track2.mp3
+track3.mp3
+
