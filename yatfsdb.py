@@ -4,11 +4,41 @@ class FilesTags():
     def __init__(self):
         self.files = {}
         self.tags = {}
+        self.tag_items = []
     
-    def add(file_id, tag_id):
+    def add(self, file_id, tag_id):
         self.files.setdefault(file_id, []).append(tag_id)
         self.tags.setdefault(tag_id, []).append(file_id)
+    
+    def remove_tag(self, tag_id):
+        tag_files = self.tags[tag_id]
+        for file_id in tag_files:
+            self.files[file_id].remove(tag_id)
+        del self.tags[tag_id]
         
+    def remove_file(self, file_id):
+        file_tags = self.files[file_id]
+        for tag_id in file_tags:
+            self.tags[tag_id].remove(file_id)
+        del self.files[file_id]
+        
+    def remove_tag_and_files(self, tag_id):
+        tag_files = self.tags[tag_id]
+        for file_id in tag_files:
+            self.remove_file(file_id)
+        del self.tags[tag_id]       
+    
+    def sort_tag_items(self):
+        self.tag_items = self.tags.items()
+        self.tag_items.sort(key=lambda x: len(x[1]), reverse=True)
+        
+    def finalize(self):
+        self.tag_items = self.tags.items()
+        file_count = len(self.files)
+        for k, v in self.tag_items:
+            if len(v) == file_count:
+                self.remove_tag(k)
+        self.sort_tag_items()
             
 class YatfsDb():
     """ Main FS object """
@@ -22,8 +52,8 @@ class YatfsDb():
         self.con.close()
         
     def _recreate_tables(self):
-        """ Drop exisiting tables and create new. """
-        self.con.execute("""
+        """ Drop existing tables and create new. """
+        self.con.executescript("""
             DROP TABLE IF EXISTS tags;
             CREATE TABLE tags ( 
                 id INTEGER PRIMARY KEY, 
@@ -48,8 +78,8 @@ class YatfsDb():
         """)
       
     def _add_tag(self, tag_name):
-        """ Adds tag and return it's id"""
-        q = "INSERT INTO tags (tag_text) VALUES (?)"
+        """ Add tag and return it's id"""
+        q = "INSERT INTO tags (tag_name) VALUES (?)"
         cur = self.con.execute(q, (tag_name, ))
         return cur.lastrowid
       
@@ -58,10 +88,10 @@ class YatfsDb():
         q = "SELECT id FROM tags WHERE tag_name = ?"
         row = self.con.execute(q, (tag_name, )).fetchone()
         if row is not None:
-            return row['id']
+            return row[0]
         ## tag not found        
         if add_if_not_exists:
-            return _add_tag(tag_name)
+            return self._add_tag(tag_name)
         else:
             raise NameError("File not found", tag)
 
@@ -69,7 +99,7 @@ class YatfsDb():
         """ Returns the name of tag"""
         q = "SELECT tag_name FROM tags WHERE id = ?"
         cur = self.con.execute(q, (tag_id, ))
-        return cur.fetchone()['tag_name']
+        return cur.fetchone()[0]
     
 ##    def _get_tag_ids(self, tag_names, add_if_not_exists=True):
 ##        """ Converts list of tag names to list of tags ids """
@@ -111,34 +141,26 @@ class YatfsDb():
                         GROUP BY file_id 
                         HAVING COUNT(tag_id) = ?)
             """ % placeholders
-            p = tag_ids + [len(tag_ids)]
+            params = tag_ids + [len(tag_ids)]
         
         files_tags = FilesTags()
         cur = self.con.execute(query, params)
         for row in cur:
-            files_tags.add(row['file_id'], row['tag_id'])
+            files_tags.add(row[0], row[1])
         
+        files_tags.finalize()
         return files_tags
                              
     def get_file_list_full(self, tag_names):
         files_tags = self._get_tag_files(tag_names)
-
-        self.cur.execute('SELECT tag_id, COUNT(file_id) AS tag_size, \
-                          MAX(file_id) AS max_file_id \
-                          FROM temp_files_tags \
-                          GROUP BY tag_id ORDER BY tag_size DESC, tag_id')
-        file_list = []       
-        for row in self.cur:
-            node = self._get_node(row[0], row[1], row[2])
+        file_list = []
+        for tag, files in files_tags.tag_items:
+            node = self._get_node(tag, len(files), files[0])
             file_list.append(node)
-        
-        self._drop_folder_tables()
         return file_list
-  
-
-
+ 
     def _get_file_extension(self, file_id):
-        """ returns the tag id"""
+        """ Ge the fil extension"""
         cur = self.con.execute('SELECT file_extension FROM files WHERE id = ?', (file_id, ))
         return cur.fetchone()[0]
     
@@ -154,31 +176,26 @@ class YatfsDb():
     
         return node
         
-    def get_file_list_short(self, tags):   
-        self._create_folder_table(tags)
-        file_list = []   
-         
+    def get_file_list_short(self, tag_names):
+        files_tags = self._get_tag_files(tag_names)
+        file_list = []
         while True:
-            self.cur.execute('SELECT tag_id, COUNT(file_id) AS tag_size, \
-                              MAX(file_id) AS max_file_id \
-                              FROM temp_files_tags \
-                              GROUP BY tag_id ORDER BY tag_size DESC LIMIT 1')
-            row = self.cur.fetchone()
-            if row == None:
+            if len(files_tags.tag_items) == 0:
                 break
-            
-            if (len(file_list) == 0) and (row[1] > 1):
+            tag, files = files_tags.tag_items[0]
+            if (len(file_list) == 0) and (len(files) > 1):
                 file_list.append({"type": "extension"})
                 
-            node = self._get_node(row[0], row[1], row[2])
+            node = self._get_node(tag, len(files), files[0])
             file_list.append(node)
             
-            self.cur.execute('DELETE FROM temp_files_tags WHERE file_id in (\
-                                SELECT DISTINCT file_id FROM temp_files_tags \
-                                WHERE tag_id = ?)', (row[0], ))
-                              
-        self._drop_folder_tables()
+            files_tags.remove_tag_and_files(tag)
+            files_tags.sort_tag_items()
+ 
         return file_list
+    
+         
+   
     
 
 
