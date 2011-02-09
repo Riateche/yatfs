@@ -27,9 +27,9 @@ class FilesTags():
         for file_id in tag_files:
             self.remove_file(file_id)
         del self.tags[tag_id]       
-    
+
     def sort_tag_items(self):
-        self.tag_items = self.tags.items()
+        self.tag_items = [item for item in self.tags.items() if len(item[1]) > 0] 
         self.tag_items.sort(key=lambda x: len(x[1]), reverse=True)
         
     def finalize(self):
@@ -93,7 +93,7 @@ class YatfsDb():
         if add_if_not_exists:
             return self._add_tag(tag_name)
         else:
-            raise NameError("File not found", tag)
+            raise NameError("File not found", tag_name)
 
     def _get_tag_name(self, tag_id):
         """ Returns the name of tag"""
@@ -191,6 +191,7 @@ class YatfsDb():
             
             files_tags.remove_tag_and_files(tag)
             files_tags.sort_tag_items()
+            
  
         return file_list
     
