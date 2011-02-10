@@ -12,19 +12,19 @@ class FilesTags():
     
     def remove_tag(self, tag_id):
         tag_files = self.tags[tag_id]
-        for file_id in tag_files:
+        for file_id in tag_files[:]:
             self.files[file_id].remove(tag_id)
         del self.tags[tag_id]
         
     def remove_file(self, file_id):
         file_tags = self.files[file_id]
-        for tag_id in file_tags:
+        for tag_id in file_tags[:]:
             self.tags[tag_id].remove(file_id)
         del self.files[file_id]
         
     def remove_tag_and_files(self, tag_id):
         tag_files = self.tags[tag_id]
-        for file_id in tag_files:
+        for file_id in tag_files[:]:
             self.remove_file(file_id)
         del self.tags[tag_id]       
 
@@ -124,7 +124,7 @@ class YatfsDb():
     
     def print_table(self, table_name):
         print table_name
-        for row in self.con.execute('SELECT * FROM ?', (table_name, )):
+        for row in self.con.execute('SELECT * FROM ' + table_name):
             print row
     
     def _get_tag_files(self, tag_names):
@@ -151,17 +151,14 @@ class YatfsDb():
         files_tags.finalize()
         return files_tags
                              
-    def get_file_list_full(self, tag_names):
-        files_tags = self._get_tag_files(tag_names)
-        file_list = []
-        for tag, files in files_tags.tag_items:
-            node = self._get_node(tag, len(files), files[0])
-            file_list.append(node)
-        return file_list
- 
     def _get_file_extension(self, file_id):
-        """ Ge the fil extension"""
+        """ Ge the file extension"""
         cur = self.con.execute('SELECT file_extension FROM files WHERE id = ?', (file_id, ))
+        return cur.fetchone()[0]
+    
+    def _get_file_tag_id(self, file_id):
+        """ Ge the fil extension"""
+        cur = self.con.execute('SELECT file_tag_id FROM files WHERE id = ?', (file_id, ))
         return cur.fetchone()[0]
     
     def _get_node(self, tag_id, tag_size, max_file_id):
@@ -175,6 +172,14 @@ class YatfsDb():
                            self._get_file_extension(max_file_id)
     
         return node
+    
+    def get_files_without_tags(self, files_tags):
+        file_list = []
+        for file_id, tags in files_tags.files.items():
+            if len(tags) == 0:
+               node = self._get_node(self._get_file_tag_id(file_id), 1, file_id)
+               file_list.append(node) 
+        return file_list                
         
     def get_file_list_short(self, tag_names):
         files_tags = self._get_tag_files(tag_names)
@@ -192,10 +197,17 @@ class YatfsDb():
             files_tags.remove_tag_and_files(tag)
             files_tags.sort_tag_items()
             
- 
+        file_list.extend(self.get_files_without_tags(files_tags))
         return file_list
     
-         
+    def get_file_list_full(self, tag_names):
+        files_tags = self._get_tag_files(tag_names)
+        file_list = []
+        for tag, files in files_tags.tag_items:
+            node = self._get_node(tag, len(files), files[0])
+            file_list.append(node)
+        file_list.extend(self.get_files_without_tags(files_tags))
+        return file_list         
    
     
 
