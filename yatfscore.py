@@ -1,6 +1,13 @@
 ﻿import sqlite3
 
 class FilesTags():
+    """
+    Class for storing pairs (file_id, tag_id). The data can be retrieved by:
+    FilesTags.files[file_id] - list of file_id tags
+    FilesTags.tags[tag_id] - list of files with tag_id
+
+    """
+    
     def __init__(self):
         self.files = {}
         self.tags = {}
@@ -40,7 +47,7 @@ class FilesTags():
                 self.remove_tag(k)
         self.sort_tag_items()
             
-class YatfsDb():
+class YatfsCore():
     """ Main FS object """
     
     def __init__(self, database, rebuild):
@@ -101,11 +108,9 @@ class YatfsDb():
         cur = self.con.execute(q, (tag_id, ))
         return cur.fetchone()[0]
     
-##    def _get_tag_ids(self, tag_names, add_if_not_exists=True):
-##        """ Converts list of tag names to list of tags ids """
-##        return 
         
     def _add_file_tags(self, file_id, tag_ids):
+        """ Add file with tags to files_tags table"""
         for tag_id in tag_ids:
             q = """INSERT OR IGNORE INTO files_tags (file_id, tag_id)
                         VALUES (?, ?)"""
@@ -152,12 +157,12 @@ class YatfsDb():
         return files_tags
                              
     def _get_file_extension(self, file_id):
-        """ Ge the file extension"""
+        """ Get the file extension"""
         cur = self.con.execute('SELECT file_extension FROM files WHERE id = ?', (file_id, ))
         return cur.fetchone()[0]
     
     def _get_file_tag_id(self, file_id):
-        """ Ge the fil extension"""
+        """ Get the file_tag id (filename tag)"""
         cur = self.con.execute('SELECT file_tag_id FROM files WHERE id = ?', (file_id, ))
         return cur.fetchone()[0]
     

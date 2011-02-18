@@ -2,7 +2,7 @@
 
 import os
 from optparse import OptionParser
-from yatfsdb import YatfsDb
+from yatfscore import YatfsCore
 
 def path_to_tags(path, case_sensitive):
     if not case_sensitive:
@@ -10,9 +10,10 @@ def path_to_tags(path, case_sensitive):
     tags = path.split(os.sep)
     tags = filter(lambda x: len(x)>0, tags) #remove empty strings
     tags = list(set(tags)) #remove duplicates
-    return tags
+    return tags
+
 def get_yatfs(folder, case_sensitive):
-    db = YatfsDb("", True) 
+    db = YatfsCore("", True) 
     prefix_length = len(folder) + 1
 
     for root, dirs, files in os.walk(folder): #@UnusedVariable
