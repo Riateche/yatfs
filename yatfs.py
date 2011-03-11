@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import fuse
 
 fuse.fuse_python_api = (0, 2)
