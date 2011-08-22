@@ -44,6 +44,41 @@ class YatFS(fuse.Fuse):
         self.init_core()
 #        fuse.Fuse.main(self)
     
+    def getattr(self, path):
+
+      st = fuse.Stat()
+
+      st.st_mode = 0
+
+      st.st_ino = 0
+      st.st_dev = 0
+
+      st.st_nlink = 0
+
+      st.st_uid = 0
+
+      st.st_gid = 0
+
+      st.st_size = 0
+
+      st.st_atime = 0
+      st.st_mtime = 0
+      st.st_ctime = 0
+      if path == '/' or path == '/simple':
+
+        st.st_mode = stat.S_IFDIR | 0755
+        st.st_nlink = 3
+      elif path == '/README':
+
+        st.st_mode = stat.S_IFREG | 0444
+        st.st_nlink = 1
+        st.st_size = len(self.README)
+      else:
+
+        return -errno.ENOENT
+      return st
+   
+    
     def readdir(self, path, offset):
         # 
         yield fuse.Direntry('.')
