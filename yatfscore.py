@@ -205,6 +205,10 @@ class YatfsCore():
         file_list.extend(self.get_files_without_tags(files_tags))
         return file_list
     
+    def get_file_item(self, tag_names):
+        files_tags = self._get_tag_files(tag_names)
+        file_list = []       
+    
     def get_file_list_full(self, tag_names):
         files_tags = self._get_tag_files(tag_names)
         file_list = []

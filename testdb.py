@@ -44,6 +44,29 @@ def print_folder_contents(db, folder, case_sensitive):
         output_file_list(db.get_file_list_full(tags))
     else:
         output_file_list(db.get_file_list_short(tags))
+def get_text_attr(db, path, case_sensitive):
+    if path[-1] == '+':
+        return "extension"
+    tags = path_to_tags(folder, case_sensitive)
+    
+    return "unknown"
+    
+def print_folder_contents2(db, folder, case_sensitive):
+    tags = path_to_tags(folder, case_sensitive)
+    if tags.count('+') > 0:
+        tags.remove('+')
+        file_list = db.get_file_list_full(tags)
+    else:
+        file_list = db.get_file_list_short(tags)
+    
+    for file in file_list:
+        if file["type"] == "extension":
+            file_name = "+"
+        else:
+            file_name = file["name"]
+        file_name = folder + "/" + file_name     
+        print file_name + "\t" + get_text_attr(db, file_name, case_sensitive)
+         
 
 def main():
     usage = "usage: %prog [options] arg"
@@ -63,7 +86,7 @@ def main():
         
         if folder == "q":
             break
-        print_folder_contents(db, folder.decode('utf-8'), options.case_sensitive) 
+        print_folder_contents2(db, folder.decode('utf-8'), options.case_sensitive) 
 
 if __name__ == '__main__':
     main()
